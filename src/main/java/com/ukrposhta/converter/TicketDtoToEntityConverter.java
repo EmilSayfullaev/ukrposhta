@@ -19,6 +19,7 @@ public class TicketDtoToEntityConverter implements Converter<TicketDto, Ticket> 
     @Override
     public Ticket convert(TicketDto dto) {
         Ticket ticket = new Ticket();
+        ticket.setId(dto.getId());
         ticket.setDate(dto.getDate());
         ticket.setDescription(dto.getDescription());
         ticket.setStatus(dto.getStatus());

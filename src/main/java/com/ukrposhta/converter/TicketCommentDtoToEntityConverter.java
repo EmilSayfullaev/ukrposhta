@@ -11,6 +11,7 @@ public class TicketCommentDtoToEntityConverter implements Converter<TicketCommen
     @Override
     public TicketComment convert(TicketCommentDto ticketCommentDto) {
         TicketComment comment = new TicketComment();
+        comment.setId(ticketCommentDto.getId());
         comment.setDate(ticketCommentDto.getDate());
         comment.setComment(ticketCommentDto.getComment());
         return comment;

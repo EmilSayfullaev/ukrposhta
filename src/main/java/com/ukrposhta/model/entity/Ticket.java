@@ -21,7 +21,7 @@ public class Ticket extends AuditableEntity {
     @Column
     private String description;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinTable(
             schema = "ukrposhta",
             name = "ticket_comment",

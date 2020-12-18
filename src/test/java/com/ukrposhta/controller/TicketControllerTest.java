@@ -1,89 +1,132 @@
 package com.ukrposhta.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ukrposhta.config.MvcLayerEmbeddedDataSourceTestConfig;
-import com.ukrposhta.config.ServiceBeans;
-import com.ukrposhta.config.ServiceConfig;
-import com.ukrposhta.service.TicketService;
-import org.junit.Before;
-import org.junit.Ignore;
+import com.ukrposhta.converter.TicketToDtoConverter;
+import com.ukrposhta.model.dto.TicketCommentDto;
+import com.ukrposhta.model.dto.TicketDto;
+import com.ukrposhta.model.entity.Ticket;
+import com.ukrposhta.model.entity.TicketStatus;
+import com.ukrposhta.repository.TicketRepository;
+import com.ukrposhta.service.TicketServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.context.WebApplicationContext;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.cert.CertificateException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.net.URI;
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @RunWith(SpringRunner.class)
-@ContextConfiguration(classes = {MvcLayerEmbeddedDataSourceTestConfig.class, ServiceConfig.class, ServiceBeans.class})
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-@WebAppConfiguration
-@AutoConfigureMockMvc
 @SpringBootTest
+@ContextConfiguration(classes = {MvcLayerEmbeddedDataSourceTestConfig.class})
+@AutoConfigureMockMvc
+@TestPropertySource(locations = "classpath:application-integrationtest.properties")
 class TicketControllerTest {
 
     @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
     private MockMvc mvc;
 
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private TicketToDtoConverter ticketToDtoConverter;
+
     @MockBean
-    TicketService ticketService;
+    TicketServiceImpl ticketService;
 
-    private final String path = "api/tickets";
+    private final String path = "/api/tickets";
 
-    @Ignore
     @Test
     void findOne() throws Exception {
 
-        mvc.perform(get(path + "/" + 1)
+        mvc.perform(get(path + "/" + 10L)
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", notNullValue()))
                 .andExpect(jsonPath("$.description", is("description")))
-                .andExpect(jsonPath("$.id", is(1)))
-                .andExpect(jsonPath("$.status", is("OPEN")));
+                .andExpect(jsonPath("$.id", is(10)))
+                .andExpect(jsonPath("$.status", is("OPEN")))
+                .andExpect(jsonPath("$.comment", notNullValue()))
+                .andExpect(jsonPath("$.comment.comment", is("comment")));
     }
 
     @Test
-    void findAll() {
+    void findAll() throws Exception {
+        mvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", notNullValue()))
+                .andExpect(jsonPath("$.[0].description", is("description")))
+                .andExpect(jsonPath("$.[0].id", is(10)))
+                .andExpect(jsonPath("$.[0].status", is("OPEN")));
     }
 
     @Test
-    void create() {
+    void create() throws Exception {
+        TicketDto dto = getTicketDto();
+
+        mvc.perform(post(path + "/create")
+                .contentType(MediaType.APPLICATION_JSON_VALUE).
+                        content(objectMapper.writeValueAsBytes(dto)))
+                .andExpect(status().isOk());
     }
 
     @Test
-    void update() {
+    void update() throws Exception {
+        Ticket ticket = ticketRepository.findById(10L).orElse(null);
+        assert ticket != null;
+        TicketDto dto = ticketToDtoConverter.convert(ticket);
+        assert dto != null;
+        dto.setDescription("updated");
+
+        mvc.perform(put(path + "/" + ticket.getId())
+                .contentType(MediaType.APPLICATION_JSON_VALUE).
+                        content(objectMapper.writeValueAsBytes(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", notNullValue()))
+                .andExpect(jsonPath("$.description", is("updated")))
+                .andExpect(jsonPath("$.id", is(10)))
+                .andExpect(jsonPath("$.status", is("OPEN")))
+                .andExpect(jsonPath("$.comment", notNullValue()))
+                .andExpect(jsonPath("$.comment.comment", is("comment")));
     }
 
     @Test
-    void deleteEmployee() {
+    void deleteTicket() throws Exception {
+
+        mvc.perform(delete(URI.create(path + "/" + 10L)))
+                .andExpect(status().isNoContent());
+    }
+
+    private TicketCommentDto getCommentDto() {
+        TicketCommentDto dto = new TicketCommentDto();
+        dto.setDate(LocalDateTime.now());
+        dto.setComment("comment");
+        return dto;
+    }
+
+    private TicketDto getTicketDto() {
+        TicketDto dto = new TicketDto();
+        dto.setDate(LocalDateTime.now());
+        dto.setDescription("description");
+        dto.setStatus(TicketStatus.OPEN);
+        dto.setComment(getCommentDto());
+        return dto;
     }
 }
