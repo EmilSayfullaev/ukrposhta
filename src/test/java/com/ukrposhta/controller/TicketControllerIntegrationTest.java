@@ -3,12 +3,11 @@ package com.ukrposhta.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ukrposhta.config.MvcLayerEmbeddedDataSourceTestConfig;
 import com.ukrposhta.converter.TicketToDtoConverter;
-import com.ukrposhta.model.dto.TicketCommentDto;
 import com.ukrposhta.model.dto.TicketDto;
 import com.ukrposhta.model.entity.Ticket;
-import com.ukrposhta.model.entity.TicketStatus;
 import com.ukrposhta.repository.TicketRepository;
 import com.ukrposhta.service.TicketServiceImpl;
+import com.ukrposhta.test.BaseClass;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +21,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsNull.notNullValue;
@@ -35,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = {MvcLayerEmbeddedDataSourceTestConfig.class})
 @AutoConfigureMockMvc
 @TestPropertySource(locations = "classpath:application-integrationtest.properties")
-class TicketControllerTest {
+class TicketControllerIntegrationTest extends BaseClass {
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -112,21 +110,5 @@ class TicketControllerTest {
 
         mvc.perform(delete(URI.create(path + "/" + 10L)))
                 .andExpect(status().isNoContent());
-    }
-
-    private TicketCommentDto getCommentDto() {
-        TicketCommentDto dto = new TicketCommentDto();
-        dto.setDate(LocalDateTime.now());
-        dto.setComment("comment");
-        return dto;
-    }
-
-    private TicketDto getTicketDto() {
-        TicketDto dto = new TicketDto();
-        dto.setDate(LocalDateTime.now());
-        dto.setDescription("description");
-        dto.setStatus(TicketStatus.OPEN);
-        dto.setComment(getCommentDto());
-        return dto;
     }
 }
